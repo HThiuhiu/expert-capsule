@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expert-capsule"
+version = "0.2.0"
+description = "Chưng cất lịch sử chat với AI (ChatGPT, Claude, Gemini) thành một Agent Skill mang tiêu chuẩn và văn phong của bạn"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+dependencies = ["pyyaml>=6"]
+keywords = ["agent-skills", "claude", "chatgpt", "personalization", "llm", "distillation"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=1.0"]                                   # model anthropic/...
+embed = ["numpy>=1.26", "sentence-transformers>=3.0"]            # capsule.embed: local
+gpu = ["numpy>=1.26", "paramiko>=3.0"]                           # capsule.embed: gpu (máy chủ qua SSH)
+dev = ["pytest>=8"]
+
+[project.scripts]
+capsule = "capsule.cli:main"   # chế độ Lite (mặc định)
+pc = "pc.cli:main"             # chế độ Deep và công cụ nghiên cứu
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

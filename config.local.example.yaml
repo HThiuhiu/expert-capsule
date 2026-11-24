@@ -1,0 +1,28 @@
+# Chép file này thành config.local.yaml (đã gitignore) và sửa. Khoá nào ghi ở đây sẽ đè lên config.yaml.
+
+capsule:
+  owner_name: "Tên của bạn"     # hiện trong SKILL.md: "Cách làm việc của <tên>"
+  slug: ten-ban                 # capsule ra ở expert/expert-<slug>/
+  # embed: "local"              # bật đặc trưng "lặp lại yêu cầu" (cần pip install -e ".[embed]")
+
+# Chọn MỘT trong các cách chạy model dưới đây (bỏ dấu # ở khối muốn dùng).
+
+# (A) API Anthropic: giữ mặc định trong config.yaml, chỉ cần ANTHROPIC_API_KEY hoặc `ant auth login`.
+
+# (B) Rẻ nhất: mọi vai là Haiku.
+# models:
+#   cheap:  {model: "anthropic/claude-haiku-5-5", effort: low}
+#   strong: {model: "anthropic/claude-haiku-5-5", effort: medium}
+#   judge:  {model: "anthropic/claude-haiku-5-5", effort: medium}
+
+# (C) Không có API key, đang dùng Claude Code: subagent trả lời (xem .claude/skills/capsule-agent-mode/SKILL.md).
+# models:
+#   cheap:  {model: "agent/claude-haiku"}
+#   strong: {model: "agent/claude-haiku"}
+#   judge:  {model: "agent/claude-haiku"}
+
+# (D) Bước 2 và 4 chạy trên máy (Ollama), không gửi lịch sử chat lên API; Bước 5, 6 vẫn dùng model mạnh.
+# models:
+#   cheap:  {model: "ollama/qwen3:14b"}
+
+# Lĩnh vực tuỳ chỉnh: xem ví dụ trong config.yaml (capsule.custom_domains).

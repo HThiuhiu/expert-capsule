@@ -1,0 +1,100 @@
+# Expert Capsule: cấu hình chung. Đặt cấu hình RIÊNG (tên bạn, model, lĩnh vực tuỳ chỉnh, máy GPU) vào
+# config.local.yaml cạnh file này: nó được gộp đè lên đây khi chạy và đã có trong .gitignore.
+# Mẫu: config.local.example.yaml.
+
+models:
+  # Model theo vai, dạng "<provider>/<model>":
+  #   anthropic/<model>   SDK Anthropic (pip install -e ".[anthropic]"), đọc ANTHROPIC_API_KEY hoặc `ant auth login`
+  #   openai/<model>      API tương thích OpenAI: OPENAI_API_KEY, OPENAI_BASE_URL (OpenRouter, LM Studio, ...)
+  #   ollama/<model>      model chạy trên máy qua Ollama (OLLAMA_BASE_URL, mặc định http://localhost:11434/v1)
+  #   agent/<tên>         không gọi API: subagent của Claude Code trả lời (xem README, mục "Chạy trong Claude Code")
+  # effort (chỉ Anthropic): low | medium | high. Vai rẻ để low.
+  cheap:     {model: "anthropic/claude-haiku-5-5", effort: low}      # Bước 2 (gán lĩnh vực), 4 (khai thác)
+  strong:    {model: "anthropic/claude-opus-5-5", effort: medium}    # Bước 2 (gộp nhãn), 5 (tổng hợp), 6
+  judge:     {model: "anthropic/claude-opus-5-5", effort: medium}    # Bước 6 (chấm)
+  # Muốn rẻ nhất: đặt cả ba là anthropic/claude-haiku-5-5 (một lần chạy Lite cỡ vài chục cent).
+
+  # --- chế độ Deep (`pc`, nghiên cứu): nhãn mọi lượt, verifier, quy nạp kiểu cũ ---
+  labeler:   {model: "anthropic/claude-haiku-5-5", effort: low}
+  verifier:  {model: "anthropic/claude-opus-5-5", effort: medium}
+  inducer:   {model: "anthropic/claude-haiku-5-5", effort: low}
+  analyzer:  {model: "anthropic/claude-haiku-5-5", effort: low}
+  builder:   {model: "anthropic/claude-opus-5-5", effort: medium}
+  generator: {model: "anthropic/claude-haiku-5-5", effort: low}
+  embedder:  {model: "BAAI/bge-m3"}   # Bước 3, đặc trưng lặp lại yêu cầu (tuỳ chọn, xem capsule.embed)
+
+# Giá USD / 1M token để ước lượng chi phí. Cập nhật khi giá đổi.
+pricing:
+  "anthropic/claude-haiku-5-5":  {input: 0.10, output: 0.50}
+  "anthropic/claude-sonnet-5-5": {input: 2.0,  output: 10.0}
+  "anthropic/claude-opus-5-5":   {input: 4.0,  output: 20.0}
+
+# Expert Capsule, chế độ Lite. Mặc định đầy đủ ở src/capsule/common.py (DEFAULTS).
+capsule:
+  owner_name: "Chủ capsule"   # tên hiển thị trong SKILL.md: đặt tên bạn trong config.local.yaml
+  slug: me                    # thư mục ra: expert/expert-<slug>/
+  out_dir: expert
+  work_dir: data/lite         # dữ liệu trung gian (riêng tư, gitignore)
+  thin_sessions: 15           # Bước 2: dưới 15 phiên là lĩnh vực mỏng
+  turns: 300                  # Bước 3: chọn 200 đến 400 lượt
+  random_frac: 0.10
+  quickcheck_n: 15            # Bước 6
+  custom_chars: 1500          # exports/custom_instructions.txt (ChatGPT miễn phí 1.500 ký tự, trả phí 5.000)
+  embed: "off"                # Bước 3 f_rephrase: "off" | "local" (sentence-transformers trên máy) | "gpu" (xem gpu)
+  # Lĩnh vực tuỳ chỉnh: cắt lại phiên theo kiểu việc thay vì theo ngành. Ví dụ (bỏ dấu # để dùng):
+  # custom_domains:
+  #   nghien-cuu:
+  #     name: "Phong cách nghiên cứu"
+  #     match: any                       # any: một điều kiện đúng là đủ; all (mặc định): mọi điều kiện
+  #     raw_task: "review paper|plan project|find paper|literature|research"   # regex trên nhãn thô Bước 2
+  #     raw_domain: "academic|research"
+  #   hoc-lap-trinh:
+  #     name: "Cách học lập trình"
+  #     domains: [lap-trinh-ngon-ngu, phat-trien-phan-mem]                     # slug lĩnh vực của Bước 2
+  #     task_types: [giai-thich, giai-bai]
+
+# ----- Phần dưới dùng cho chế độ Deep (`pc`) -----
+
+# Danh sách đóng cho nhãn phiên ở Deep (B5).
+taxonomy:
+  task_types: [debug_fix, build_code, ml_experiment, research_review, lit_search, concept_explain,
+               study_exam, algo_problem, writing_edit, content_media, agent_ops, other]
+  domains: [ml_ai_research, software_web, algorithms, coursework, content_creation, quant_finance, personal, other]
+
+induce:
+  top_k: 5
+  min_events: 3
+  min_sessions: 2
+  supersede_days: 90
+  summary_chars: 3000
+  skill_name: persona-capsule
+  splits: [train, dev]
+
+pack:
+  owner_name: "Chủ capsule"
+  min_sessions: 25
+  out_dir: skills
+
+# Máy chủ GPU cho embedding qua SSH (tuỳ chọn). Mật khẩu đọc từ env GPU_PW. Ghi host thật trong config.local.yaml.
+# gpu:
+#   host: gpu.example.com
+#   port: 22
+#   user: me
+#   python: ~/miniconda3/envs/ml/bin/python
+#   workdir: pc_gpu
+
+cost_confirm_usd: 20
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  gold: data/gold
+  capsule: capsule
+  eval: eval
+  reports: reports
+  cache: .cache/llm
+
+ingest:
+  min_user_turns: 2           # loại phiên dưới 2 lượt user
+  include_attachments: true   # nối nội dung file đính kèm (Claude export) vào lượt user
+  gate_min_sessions: 50       # cảnh báo nếu ít phiên hơn mức này

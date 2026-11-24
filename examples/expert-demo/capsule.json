@@ -1,0 +1,44 @@
+{
+ "name": "expert-demo",
+ "display_name": "Minh",
+ "capsule_version": "v1",
+ "spec": "1.0",
+ "mode": "lite",
+ "created_at": "2026-11-24T17:04:23",
+ "domains": [
+  {
+   "slug": "kinh-te-vi-mo",
+   "name": "Kinh tế vĩ mô",
+   "n_sessions": 42,
+   "n_events": 6,
+   "n_rules": 3,
+   "n_playbooks": 1
+  },
+  {
+   "slug": "phan-tich-dau-tu",
+   "name": "Phân tích đầu tư",
+   "n_sessions": 31,
+   "n_events": 7,
+   "n_rules": 4,
+   "n_playbooks": 0
+  }
+ ],
+ "n_sessions_total": 73,
+ "n_events": 13,
+ "n_core_rules": 1,
+ "n_style": 3,
+ "n_rules_reviewed": 0,
+ "n_rules_total": 8,
+ "quickcheck": null,
+ "skill_md": {
+  "approx_tokens": 527,
+  "lines": 36,
+  "within_limits": true
+ },
+ "exports": [
+  "exports/HUONG_DAN_CAI.md",
+  "exports/custom_instructions.txt",
+  "exports/project_instructions.md",
+  "exports/system_prompt.md"
+ ]
+}

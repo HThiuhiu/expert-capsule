@@ -1,0 +1,37 @@
+# ===== Dữ liệu cá nhân: KHÔNG BAO GIỜ đưa lên git =====
+# Export chat và mọi dữ liệu trung gian (đã che PII nhưng vẫn là lịch sử chat thật)
+/data/*
+!/data/README.md
+# Cache LLM, hàng đợi subagent, embedding (chứa nội dung chat)
+.cache/
+# Capsule sinh ra (private/ chứa đoạn trích nguyên văn); ví dụ công khai nằm ở examples/
+/expert/
+/skills/
+# Báo cáo chạy thật (có số liệu và trích dẫn)
+/reports/*
+!/reports/.gitkeep
+# Đầu ra chế độ Deep
+/capsule/*
+!/capsule/.gitkeep
+/eval/runs/*
+!/eval/runs/.gitkeep
+/eval/baselines/self_prompt.md
+/archive/
+# Cấu hình riêng (tên, model, máy GPU)
+config.local.yaml
+.env
+*.env
+
+# ===== Claude Code: chỉ đưa skill của dự án =====
+/.claude/*
+!/.claude/skills/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+build/
+dist/
