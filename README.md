@@ -47,7 +47,7 @@ Mọi kết quả LLM được cache trên đĩa: chạy lại, đổi lĩnh v�
 Cần Python 3.11 trở lên.
 
 ```bash
-git clone <repo-url> expert-capsule && cd expert-capsule
+git clone https://github.com/HThiuhiu/expert-capsule.git && cd expert-capsule
 pip install -e ".[anthropic]"          # thêm ,embed nếu muốn đặc trưng "lặp lại yêu cầu" (Bước 3)
 cp config.local.example.yaml config.local.yaml   # điền tên bạn, chọn cách chạy model
 ```
