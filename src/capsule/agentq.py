@@ -79,19 +79,28 @@ Rules:
 """
 
 
+def model_hint(model: str) -> str:
+    """`agent/claude-haiku` -> `haiku`: model gợi ý cho subagent trả lời gói."""
+    name = model.split("/", 1)[-1]
+    return next((k for k in ("haiku", "sonnet", "opus", "fable") if k in name), name)
+
+
 def make_bundles(cfg, max_chars: int = 90_000, tags: list[str] | None = None) -> list[Path]:
-    """Xoá gói cũ, gom yêu cầu đang chờ theo tag thành gói <= max_chars ký tự."""
+    """Xoá gói cũ, gom yêu cầu đang chờ theo (tag, model) thành gói <= max_chars ký tự.
+
+    Ghi kèm `index.json`: mỗi gói một mục {bundle, answers, tag, model, n}, để agent biết mở subagent model nào.
+    """
     bd = bdir(cfg)
-    for p in bd.glob("*.md"):  # giữ đáp án chưa nạp và thư mục imported/
-        p.unlink()
-    by_tag: dict[str, list[dict]] = defaultdict(list)
+    for p in [*bd.glob("*.md"), bd / "index.json"]:  # giữ đáp án chưa nạp và thư mục imported/
+        p.unlink(missing_ok=True)
+    groups_by: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for r in pending(cfg):
         t = r.get("tag") or "misc"
         if tags and t not in tags:
             continue
-        by_tag[t].append(r)
-    paths = []
-    for tag, reqs in sorted(by_tag.items()):
+        groups_by[(t, r.get("model") or "")].append(r)
+    paths, index, seq = [], [], Counter()
+    for (tag, model), reqs in sorted(groups_by.items()):
         groups, cur, size = [], [], 0
         for r in reqs:
             n = sum(len(m["content"]) for m in r["messages"])
@@ -102,11 +111,20 @@ def make_bundles(cfg, max_chars: int = 90_000, tags: list[str] | None = None) ->
             size += n
         if cur:
             groups.append(cur)
-        for i, g in enumerate(groups):
-            name = f"{re.sub(r'[^a-z0-9_]+', '_', tag.lower())}-{i:02d}"
+        for g in groups:
+            name = f"{re.sub(r'[^a-z0-9_]+', '_', tag.lower())}-{seq[tag]:02d}"
+            seq[tag] += 1
             out = bd / f"{name}.answers.jsonl"
             paths.append(_write_bundle(bd / f"{name}.md", name, tag, g, out))
+            index.append({"bundle": str(paths[-1].resolve()), "answers": str(out.resolve()), "tag": tag,
+                          "model": model_hint(model), "n": len(g)})
+    (bd / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     return paths
+
+
+def bundle_index(cfg) -> list[dict]:
+    p = bdir(cfg) / "index.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else []
 
 
 def _write_bundle(path: Path, name: str, tag: str, reqs: list[dict], out: Path) -> Path:

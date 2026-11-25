@@ -111,7 +111,7 @@ def run(cfg, llm, sessions: list[Session], holdout: list[dict], capsule_for) -> 
     if jr.pending:
         raise NeedAgents("Bước 6 (judge)", jr.pending)
     if rows and jr.errors and not any(jr.answers):
-        raise RuntimeError(f"Bước 6: judge lỗi hết ({jr.errors[0][:200]}). Kiểm tra vai `judge` trong config.yaml.")
+        raise RuntimeError(f"Bước 6: judge lỗi hết ({jr.errors[0][:200]}). Kiểm tra vai `judge` trong config.local.yaml.")
     cap_hits = base_hits = judged = 0
     for g, ans in zip(groups, jr.answers):
         got = {str(x.get("id")): x for x in (ans or {}).get("items") or [] if isinstance(x, dict)}

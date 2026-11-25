@@ -1,4 +1,5 @@
-# Chép file này thành config.local.yaml (đã gitignore) và sửa. Khoá nào ghi ở đây sẽ đè lên config.yaml.
+# Mẫu đầy đủ cho config.local.yaml của thư mục làm việc (`capsule init` tạo sẵn một bản gọn). Khoá nào ghi ở
+# đây sẽ đè lên mặc định trong package (src/pc/config.default.yaml). File này không bao giờ lên git.
 
 capsule:
   owner_name: "Tên của bạn"     # hiện trong SKILL.md: "Cách làm việc của <tên>"
@@ -7,7 +8,7 @@ capsule:
 
 # Chọn MỘT trong các cách chạy model dưới đây (bỏ dấu # ở khối muốn dùng).
 
-# (A) API Anthropic: giữ mặc định trong config.yaml, chỉ cần ANTHROPIC_API_KEY hoặc `ant auth login`.
+# (A) API Anthropic: giữ mặc định, chỉ cần ANTHROPIC_API_KEY hoặc `ant auth login`.
 
 # (B) Rẻ nhất: mọi vai là Haiku.
 # models:
@@ -15,10 +16,11 @@ capsule:
 #   strong: {model: "anthropic/claude-haiku-5-5", effort: medium}
 #   judge:  {model: "anthropic/claude-haiku-5-5", effort: medium}
 
-# (C) Không có API key, đang dùng Claude Code: subagent trả lời (xem .claude/skills/capsule-agent-mode/SKILL.md).
+# (C) Không có API key, đang dùng Claude Code: subagent trả lời (skill trong SKILL.md tự chạy vòng này).
+#     Tên sau agent/claude- là model gợi ý cho subagent: haiku rẻ, sonnet tổng hợp luật tốt hơn.
 # models:
 #   cheap:  {model: "agent/claude-haiku"}
-#   strong: {model: "agent/claude-haiku"}
+#   strong: {model: "agent/claude-sonnet"}
 #   judge:  {model: "agent/claude-haiku"}
 
 # (D) Bước 2 và 4 chạy trên máy (Ollama), không gửi lịch sử chat lên API; Bước 5, 6 vẫn dùng model mạnh.
@@ -32,4 +34,4 @@ capsule:
 #   strong: {model: "openai/gpt-5", effort: medium}
 #   judge:  {model: "openai/gpt-5", effort: medium}
 
-# Lĩnh vực tuỳ chỉnh: xem ví dụ trong config.yaml (capsule.custom_domains).
+# Lĩnh vực tuỳ chỉnh: xem ví dụ trong src/pc/config.default.yaml (capsule.custom_domains).

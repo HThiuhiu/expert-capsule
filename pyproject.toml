@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "expert-capsule"
-version = "0.2.0"
+version = "0.3.0"
 description = "Chưng cất lịch sử chat với AI (ChatGPT, Claude, Gemini) thành một Agent Skill mang tiêu chuẩn và văn phong của bạn"
 readme = "README.md"
 license = {text = "MIT"}
@@ -29,6 +29,9 @@ pc = "pc.cli:main"             # chế độ Deep và công cụ nghiên cứu
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+pc = ["config.default.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

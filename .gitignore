@@ -22,9 +22,8 @@ config.local.yaml
 .env
 *.env
 
-# ===== Claude Code: chỉ đưa skill của dự án =====
-/.claude/*
-!/.claude/skills/
+# ===== Claude Code: cấu hình máy riêng =====
+/.claude/
 
 # ===== Python =====
 __pycache__/

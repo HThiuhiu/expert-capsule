@@ -5,16 +5,14 @@ và kiểm tra capsule ra đủ file, không lộ private/.
 """
 import json
 import re
-import shutil
+import shlex
 import zipfile
+from collections import Counter
 from pathlib import Path
 
 import pc.llm
 from capsule.cli import main
 from fixtures import chatgpt_branched, chatgpt_merge, chatgpt_short, claude_flat, claude_tree
-
-ROOT = Path(__file__).resolve().parents[1]
-
 
 def _J(o):
     return {"text": json.dumps(o, ensure_ascii=False), "input_tokens": 1, "output_tokens": 1}
@@ -22,6 +20,8 @@ def _J(o):
 
 def fake_backend(model, messages, **params):
     p = messages[-1]["content"]
+    if "hệ thống demo" in p:  # demo: trả lời lộ ra hệ nào đã thấy, để kiểm tra thử mù xáo đúng
+        return _J({"answer": "BẢN THƯỜNG" if messages[0]["content"] == "You are a helpful assistant." else "BẢN CAPSULE"})
     data = p.split("<data>\n", 1)[1].split("\n</data>", 1)[0] if "<data>" in p else ""
     if p.startswith("For each chat session below"):
         n = len(re.findall(r"^\[s\d+\]", data, re.M))
@@ -68,7 +68,7 @@ def fake_backend(model, messages, **params):
 
 
 def test_lite_end_to_end(tmp_path, monkeypatch, capsys):
-    shutil.copy(ROOT / "config.yaml", tmp_path / "config.yaml")
+    # thư mục làm việc trống: chỉ có config.local.yaml, mặc định lấy từ package (như khi cài skill/plugin)
     (tmp_path / "config.local.yaml").write_text(
         "capsule:\n  owner_name: An\n  slug: an\n  thin_sessions: 1\n  quickcheck_n: 1\n", encoding="utf-8")
     for sub, convs in (("chatgpt", [chatgpt_branched(), chatgpt_merge(), chatgpt_short()]),
@@ -110,3 +110,77 @@ def test_lite_end_to_end(tmp_path, monkeypatch, capsys):
     # chạy lại: mọi thứ từ cache, không gọi model
     monkeypatch.setattr(pc.llm, "_http_backend", lambda *a, **k: (_ for _ in ()).throw(AssertionError("gọi lại")))
     assert main(["build", "--domains", "kiem-thu"]) == 0
+
+
+def _fake_subagents(ws: Path) -> Counter:
+    """Thay subagent: đọc từng gói trong index.json, trả lời bằng model giả, ghi file đáp án nêu trong đầu gói."""
+    seen = Counter()
+    for b in json.loads((ws / ".cache" / "agent_bundles" / "index.json").read_text(encoding="utf-8")):
+        text = Path(b["bundle"]).read_text(encoding="utf-8")
+        assert b["answers"] in text and "=== END OF BUNDLE ===" in text
+        lines = []
+        for key in re.findall(r"\| KEY: (\w+) ===", text):
+            req = json.loads((ws / ".cache" / "agent_queue" / f"{key}.json").read_text(encoding="utf-8"))
+            ans = json.loads(fake_backend(req["model"], req["messages"])["text"])
+            lines.append(json.dumps({"key": key, "answer": ans}, ensure_ascii=False))
+        assert len(lines) == b["n"]
+        Path(b["answers"]).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        seen[(b["tag"], b["model"])] += 1
+    return seen
+
+
+def test_agent_mode_like_the_skill(tmp_path, monkeypatch, capsys):
+    """Luồng của skill: init --mode agent; lệnh dừng mã 3 -> bundle -> subagent -> import -> chạy lại; không gọi API."""
+    raw = tmp_path / "Downloads"
+    raw.mkdir()
+    (raw / "conversations.json").write_text(json.dumps([chatgpt_branched(), chatgpt_merge(), chatgpt_short()],
+                                                       ensure_ascii=False), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("PC_CONFIG", raising=False)
+    monkeypatch.setattr(pc.llm, "_http_backend", lambda *a, **k: (_ for _ in ()).throw(AssertionError("gọi API")))
+    ws = tmp_path / "capsule-workspace"
+    C = ["-C", str(ws)]
+    assert main(C + ["init", "--owner", "An", "--mode", "agent"]) == 0
+    p = ws / "config.local.yaml"  # dữ liệu ít: hạ ngưỡng để đi hết các bước
+    p.write_text(p.read_text(encoding="utf-8").replace("capsule:\n", "capsule:\n  thin_sessions: 1\n  quickcheck_n: 1\n", 1),
+                 encoding="utf-8")
+    assert main(C + ["ingest", str(raw)]) == 0
+    seen = Counter()
+
+    def run(*cmd):
+        for _ in range(10):
+            rc = main(C + list(cmd))
+            if rc != 3:
+                return rc
+            capsys.readouterr()
+            assert main(C + ["status"]) == 0
+            assert shlex.join(["capsule", *cmd]) in capsys.readouterr().out  # status nhớ lệnh cần chạy lại
+            assert main(C + ["queue", "bundle"]) == 0
+            seen.update(_fake_subagents(ws))
+            assert main(C + ["queue", "import"]) == 0
+        raise AssertionError("không dừng")
+
+    assert run("domains") == 0
+    assert run("build", "--domains", "kiem-thu") == 0
+    assert ("domains", "haiku") in seen and ("synth", "sonnet") in seen and ("qc_judge", "haiku") in seen
+    capsys.readouterr()
+    assert main(C + ["status"]) == 0 and "Tiếp: capsule review --show" in capsys.readouterr().out
+    assert main(C + ["review", "--show"]) == 0 and "### KT-01" in capsys.readouterr().out
+    assert main(C + ["review", "--keep-rest"]) == 0
+    assert main(C + ["package"]) == 0
+    assert main(C + ["install", "--target", "zip"]) == 0
+    assert (ws / "expert" / "dist" / "expert-an.zip").exists()
+    capsys.readouterr()
+    assert main(C + ["status"]) == 0 and "[x] 9 install: zip Claude.ai" in capsys.readouterr().out
+
+    # thử mù: A/B xáo theo khoá, --reveal chấm đúng
+    assert run("demo", "--blind", "Câu một?", "Câu hai?") == 0
+    md = (ws / "data" / "lite" / "an" / "demo_blind.md").read_text(encoding="utf-8")
+    key = json.loads((ws / "data" / "lite" / "an" / "demo_key.json").read_text(encoding="utf-8"))["items"]
+    for part, it in zip(md.split("## Câu ")[1:], key):
+        a = part.split("### A", 1)[1].split("### B", 1)[0]
+        assert ("BẢN CAPSULE" in a) == (it["capsule"] == "A")
+    assert "BẢN CAPSULE" not in md.split("## Câu 1")[0]  # phần đầu không lộ nhãn
+    capsys.readouterr()
+    assert main(C + ["demo", "--reveal", *[it["capsule"] for it in key]]) == 0
+    assert "2/2" in capsys.readouterr().out

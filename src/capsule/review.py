@@ -101,6 +101,119 @@ def listing(cfg) -> str:
     return "\n".join(L)
 
 
+def conflicts(synth: dict) -> list[tuple[str, str, dict]]:
+    """Mọi câu hỏi mâu thuẫn: (mã M1, M2..., slug lĩnh vực, mục). Mã ổn định khi synth không đổi."""
+    out, i = [], 0
+    for slug, x in (synth.get("domains") or {}).items():
+        for cf in x.get("conflicts") or []:
+            i += 1
+            out.append((f"M{i}", slug, cf))
+    return out
+
+
+def show(cfg, codes: list[str] | None = None, all_: bool = False) -> str:
+    """Chi tiết luật chưa duyệt (hoặc các mã chỉ định) kèm bằng chứng, và câu hỏi mâu thuẫn chưa trả lời.
+
+    Dùng khi agent hỏi người dùng trong chat thay cho `capsule review` tương tác; ghi quyết định bằng `decide`.
+    """
+    synth = read_json(work_dir(cfg) / "synth.json")
+    if not synth:
+        return "Chưa có luật. Chạy `capsule build` trước."
+    evs = {e["event_id"]: e for e in read_jsonl(work_dir(cfg) / "events.jsonl")}
+    rv = load(cfg)
+    want = {c.upper() for c in codes or []}
+    L = []
+    for where, r in all_rules(synth):
+        d = decision_for(rv, r)
+        if (want and r["code"].upper() not in want) or (not want and not all_ and d):
+            continue
+        L.append(f"### {r['code']} ({where}; {len(r['events'])} event từ {len(r['sessions'])} phiên; mức {r['level']}; "
+                 f"duyệt: {d['action'] if d else 'chưa'})")
+        L.append(rule_text(r))
+        if r.get("scope"):
+            L.append(f"Phạm vi: {r['scope']}")
+        if r.get("exceptions"):
+            L.append(f"Ngoại lệ: {r['exceptions']}")
+        for e in evidence(r, evs):
+            L.append(f"- Bằng chứng ({(e.get('created_at') or '')[:10]}): \"{e['quote'][:200]}\"")
+        L.append("")
+    asked = {a["question"] for a in rv["answers"]}
+    qs = [(cid, slug, cf) for cid, slug, cf in conflicts(synth) if cf["question"] not in asked]
+    if qs and not want:
+        names = {slug: x["name"] for slug, x in synth["domains"].items()}
+        L.append("### Câu hỏi mâu thuẫn chưa trả lời")
+        L += [f"- {cid} ({names.get(slug, slug)}): {cf['question']}" for cid, slug, cf in qs]
+    return ("\n".join(L).rstrip() + "\n") if L else "Không còn luật hay câu hỏi mâu thuẫn nào chờ duyệt.\n"
+
+
+def decide(cfg, keep: list[str] = (), delete: list[str] = (), edits: dict[str, dict] | None = None,
+           answers: dict[str, str] | None = None, keep_rest: bool = False) -> str:
+    """Ghi quyết định duyệt không cần tương tác. Kiểm tra hết trước khi ghi: mã sai thì không ghi gì."""
+    synth = read_json(work_dir(cfg) / "synth.json")
+    if not synth:
+        raise ValueError("Chưa có luật. Chạy `capsule build` trước.")
+    rv = load(cfg)
+    now = dt.datetime.now().isoformat(timespec="seconds")
+    by_code = {r["code"].upper(): r for _, r in all_rules(synth)}
+    keep = [c.upper() for c in keep]
+    delete = [c.upper() for c in delete]
+    edits = {k.upper(): {f: v for f, v in fs.items() if v} for k, fs in (edits or {}).items()}
+    cmap = {cid: (slug, cf) for cid, slug, cf in conflicts(synth)}
+    answers = {k.upper(): v.strip() for k, v in (answers or {}).items() if v and v.strip()}
+    bad = [c for c in [*keep, *delete, *edits] if c not in by_code] + [c for c in answers if c not in cmap]
+    if bad:
+        raise ValueError(f"Không có mã: {', '.join(bad)}. Xem `capsule review --list` (luật) hoặc `--show` (Mx).")
+    clash = (set(keep) | set(edits)) & set(delete)
+    if clash:
+        raise ValueError(f"Vừa giữ/sửa vừa xoá: {', '.join(sorted(clash))}.")
+    for c, fs in edits.items():
+        if not fs:
+            raise ValueError(f"--edit {c}: cần ít nhất một trong --when/--do/--because/--scope/--exceptions.")
+        extra = set(fs) - set(EDITABLE)
+        if extra:
+            raise ValueError(f"Trường không sửa được: {', '.join(sorted(extra))}.")
+
+    def unblock(r):  # đổi ý sau khi đã xoá
+        rv["deleted"] = [x for x in rv["deleted"] if not (x["code"] == r["code"] and set(x["events"]) == set(r["events"]))]
+
+    n = {"giữ": 0, "sửa": 0, "xoá": 0, "trả lời": 0}
+    for c in keep:
+        r = by_code[c]
+        unblock(r)
+        rv["decisions"][r["code"]] = {"action": "keep", "events": r["events"], "at": now}
+        n["giữ"] += 1
+    for c, fs in edits.items():
+        r = by_code[c]
+        unblock(r)
+        action = "edit" if set(fs) & {"when", "do", "because"} else "scope"
+        rv["decisions"][r["code"]] = {"action": action, "events": r["events"], "at": now, **fs}
+        n["sửa"] += 1
+    for c in delete:
+        r = by_code[c]
+        rv["decisions"][r["code"]] = {"action": "delete", "events": r["events"], "at": now}
+        unblock(r)
+        rv["deleted"].append({"code": r["code"], "events": r["events"], "at": now})
+        n["xoá"] += 1
+    if keep_rest:
+        for _, r in all_rules(synth):
+            if not decision_for(rv, r):
+                rv["decisions"][r["code"]] = {"action": "keep", "events": r["events"], "at": now}
+                n["giữ"] += 1
+    for cid, a in answers.items():
+        slug, cf = cmap[cid]
+        rv["answers"] = [x for x in rv["answers"] if x["question"] != cf["question"]]
+        rv["answers"].append({"domain": slug, "question": cf["question"], "answer": a, "at": now})
+        n["trả lời"] += 1
+    save(cfg, rv)
+    left = sum(1 for _, r in all_rules(synth) if not decision_for(rv, r))
+    asked = {a["question"] for a in rv["answers"]}
+    left_q = sum(1 for _, _, cf in conflicts(synth) if cf["question"] not in asked)
+    nxt = ("chạy lại `capsule build` (cùng --domains) để tổng hợp lại theo câu trả lời, rồi `capsule package`"
+           if n["trả lời"] else "`capsule package`")
+    return (f"Đã ghi: {', '.join(f'{k} {v}' for k, v in n.items() if v) or 'không có gì'}. "
+            f"Còn {left} luật chưa duyệt, {left_q} câu hỏi mâu thuẫn.\nTiếp: {nxt}.")
+
+
 MENU = "[g]iữ  [s]ửa câu chữ  [p]hạm vi  [x]oá  [b]ỏ qua  [q] thoát"
 
 

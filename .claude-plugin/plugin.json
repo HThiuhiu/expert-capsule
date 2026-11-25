@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "expert-capsule",
+  "version": "0.3.0",
+  "description": "Distill your own AI chat history (ChatGPT, Claude, Gemini) into an Agent Skill that makes an AI work by your standards, style and domain rules. Runs inside Claude Code without an API key.",
+  "author": {
+    "name": "HThiuhiu",
+    "url": "https://github.com/HThiuhiu"
+  },
+  "homepage": "https://github.com/HThiuhiu/expert-capsule",
+  "repository": "https://github.com/HThiuhiu/expert-capsule",
+  "license": "MIT",
+  "keywords": ["agent-skills", "personalization", "chat-history", "chatgpt", "claude", "style", "vietnamese"],
+  "skills": ["./"]
+}

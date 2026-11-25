@@ -1,0 +1,25 @@
+{
+  "name": "expert-capsule",
+  "owner": {
+    "name": "HThiuhiu",
+    "url": "https://github.com/HThiuhiu"
+  },
+  "description": "Expert Capsule: turn your AI chat history into a skill that works your way.",
+  "plugins": [
+    {
+      "name": "expert-capsule",
+      "source": "./",
+      "description": "Distill your own AI chat history (ChatGPT, Claude, Gemini) into an Agent Skill that makes an AI work by your standards, style and domain rules. Runs inside Claude Code without an API key.",
+      "version": "0.3.0",
+      "author": {
+        "name": "HThiuhiu",
+        "url": "https://github.com/HThiuhiu"
+      },
+      "homepage": "https://github.com/HThiuhiu/expert-capsule",
+      "repository": "https://github.com/HThiuhiu/expert-capsule",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["agent-skills", "personalization", "chat-history", "chatgpt", "claude", "style", "vietnamese"]
+    }
+  ]
+}

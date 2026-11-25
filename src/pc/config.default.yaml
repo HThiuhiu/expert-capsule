@@ -1,6 +1,7 @@
-# Expert Capsule: cấu hình chung. Đặt cấu hình RIÊNG (tên bạn, model, lĩnh vực tuỳ chỉnh, máy GPU) vào
-# config.local.yaml cạnh file này: nó được gộp đè lên đây khi chạy và đã có trong .gitignore.
-# Mẫu: config.local.example.yaml.
+# Expert Capsule: cấu hình mặc định (nằm trong package, không cần sửa). Cấu hình RIÊNG của bạn (tên, model,
+# lĩnh vực tuỳ chỉnh, máy GPU) đặt ở config.local.yaml trong thư mục làm việc: file đó được gộp đè lên đây.
+# Tạo thư mục làm việc: `capsule init`. Mẫu đầy đủ: config.local.example.yaml.
+# Thêm config.yaml trong thư mục làm việc (tuỳ chọn) cũng được gộp đè, trước config.local.yaml.
 
 models:
   # Model theo vai, dạng "<provider>/<model>":

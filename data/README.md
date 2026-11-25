@@ -2,6 +2,8 @@
 
 Mọi thứ trong thư mục này là dữ liệu riêng và đã nằm trong `.gitignore` (trừ file này).
 
+Dùng skill hoặc `capsule init <thư mục>` thì dữ liệu nằm trong `<thư mục>/data/` của thư mục làm việc đó; file này mô tả bố cục chung.
+
 Đặt file export vào `data/raw/`, mỗi nguồn một thư mục con tuỳ ý:
 
 | Nguồn | Cách lấy | Đặt gì vào `data/raw/` |

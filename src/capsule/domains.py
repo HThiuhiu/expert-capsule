@@ -213,7 +213,7 @@ def summary(d: dict) -> str:
 def table(d: dict) -> str:
     L = ["| slug | Lĩnh vực | Phiên | Mỏng | Nhãn thô gộp vào |", "|---|---|---|---|---|"]
     for g in d["domains"]:
-        mem = "(tuỳ chỉnh, xem config.yaml)" if g.get("custom") else \
+        mem = "(tuỳ chỉnh, xem config.local.yaml)" if g.get("custom") else \
             ", ".join(g["members"][:6]) + (" ..." if len(g["members"]) > 6 else "")
         L.append(f"| `{g['slug']}` | {g['name']} | {g['n_sessions']} | {'có' if g['thin'] else ''} | {mem} |")
     return "\n".join(L)

@@ -209,7 +209,7 @@ def cmd_induce(args) -> int:
     if args.import_answers:
         print(f"Đã nạp {LLM(cfg.path('cache')).import_answers(Path(args.import_answers))} câu trả lời vào cache.")
     if not has_credentials(model):
-        print(f"Thiếu API key cho vai inducer ({model}). Đổi model trong config.yaml hoặc đặt key.", file=sys.stderr)
+        print(f"Thiếu API key cho vai inducer ({model}). Đổi model trong config.local.yaml hoặc đặt key.", file=sys.stderr)
         return 2
     if cost > cfg.raw.get("cost_confirm_usd", 20) and not args.yes:
         print("Ước lượng vượt ngưỡng (D4). Chạy lại với --yes sau khi bạn xác nhận.", file=sys.stderr)

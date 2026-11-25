@@ -85,7 +85,17 @@ def test_config_local_overrides(tmp_path):
     c = load_config(tmp_path / "config.yaml")
     assert c.raw["models"]["cheap"] == {"model": "agent/h"}  # vai thay nguyên cụm (không dính effort)
     assert c.raw["models"]["strong"] == {"model": "anthropic/b"}
-    assert c.raw["capsule"] == {"owner_name": "An", "turns": 300}
+    assert c.raw["capsule"]["owner_name"] == "An" and c.raw["capsule"]["turns"] == 300
+    assert c.raw["capsule"]["slug"] == "me" and "paths" in c.raw  # phần còn lại lấy từ mặc định trong package
+    assert c.root == tmp_path.resolve()
+
+
+def test_workspace_without_config_yaml(tmp_path):
+    (tmp_path / "config.local.yaml").write_text("capsule:\n  slug: lan\n", encoding="utf-8")
+    c = load_config(root=tmp_path)
+    assert c.root == tmp_path.resolve() and c.raw["capsule"]["slug"] == "lan"
+    assert c.path("raw") == tmp_path.resolve() / "data" / "raw"
+    assert c.raw["models"]["cheap"]["model"].startswith("anthropic/")
 
 
 def test_prefilter_embed_off_no_numpy_needed(tmp_path):

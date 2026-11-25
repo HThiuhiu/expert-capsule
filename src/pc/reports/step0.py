@@ -96,6 +96,6 @@ def render(res: IngestResult, gate_min: int = 300, min_user_turns: int = 2) -> s
     L += ["## Việc kế tiếp (chờ bạn duyệt)", "",
           "1. Xem số liệu trên. Nếu đạt cổng, Claude đề xuất danh sách đóng 8 đến 15 `task_type`/`domain` (B5) để bạn duyệt.",
           "2. Viết `eval/baselines/self_prompt.md` (15 phút) **trước** khi xem kết quả mining (B2 ở C4, D6.2).",
-          "3. Xác nhận model cho từng vai trong `config.yaml`. Chạy `pc mine --estimate` để xem chi phí trước khi mine.", ""]
+          "3. Xác nhận model cho từng vai trong `config.local.yaml`. Chạy `pc mine --estimate` để xem chi phí trước khi mine.", ""]
     return "\n".join(L)
 
