@@ -7,6 +7,7 @@ Provider:
   ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, hoặc hồ sơ `ant auth login`. Không gửi temperature (model mới trả 400);
   `effort` trong cấu hình vai đi vào `output_config`. Opus/Sonnet 5.5 bật fallback phía server khi bị từ chối.
 - `openai/<model>`: API tương thích OpenAI qua HTTP (OPENAI_API_KEY, OPENAI_BASE_URL): OpenAI, OpenRouter, LM Studio...
+  Với api.openai.com: gửi max_completion_tokens (GPT-5, o-series không nhận max_tokens), `effort` thành reasoning_effort.
 - `ollama/<model>`: model trên máy qua Ollama (OLLAMA_BASE_URL, mặc định http://localhost:11434/v1), không cần key.
 - `relay/<model>`, `deepseek/<model>`: relay/DeepSeek tương thích OpenAI (RELAY_* hoặc DEEPSEEK_* env).
 - `agent/<tên>`: không gọi API; yêu cầu vào hàng đợi cho subagent (Claude Code) trả lời.
@@ -53,7 +54,14 @@ def _post_json(url: str, headers: dict, payload: dict, timeout: float = 300) -> 
 
 
 def _openai_compat(base: str, key: str, model: str, messages: list[dict], **params: Any) -> dict:
+    effort = params.get("effort")
     params = {k: v for k, v in params.items() if k not in _NOT_OPENAI}
+    if "api.openai.com" in base:
+        # GPT-5 / o-series trả 400 với max_tokens; max_completion_tokens tính cả token suy luận nên để rộng tay
+        if "max_tokens" in params:
+            params["max_completion_tokens"] = max(16000, int(params.pop("max_tokens") or 0))
+        if effort:
+            params["reasoning_effort"] = effort
     hdr = {"authorization": f"Bearer {key}"} if key else {}
     r = _post_json(base.rstrip("/") + "/chat/completions", hdr, {"model": model, "messages": messages, **params})
     u = r.get("usage") or {}

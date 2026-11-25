@@ -163,7 +163,24 @@ def ask_many(llm: LLM, role_cfg: dict, prompts: list[str], tag: str, workers: in
             out.answers.append(None)
         else:
             out.answers.append(r)
+    if out.errors and not out.pending and all(a is None for a in out.answers):
+        raise LLMUnavailable(tag, out.errors[0])
     return out
+
+
+class LLMUnavailable(RuntimeError):
+    """Mọi yêu cầu của một bước đều lỗi (thường do thiếu key): dừng thay vì lưu kết quả rỗng."""
+
+    def __init__(self, tag: str, err: str):
+        super().__init__(
+            f"Bước `{tag}`: mọi lệnh gọi model đều lỗi, dừng để không lưu kết quả rỗng.\n"
+            f"Lỗi đầu tiên: {err[:300]}\n"
+            "Kiểm tra cách chạy model trong config.local.yaml (mẫu: config.local.example.yaml):\n"
+            "  - Anthropic: đặt ANTHROPIC_API_KEY (bash: export ANTHROPIC_API_KEY=...; "
+            "PowerShell: $env:ANTHROPIC_API_KEY=\"...\").\n"
+            "  - OpenAI: khối E, đặt OPENAI_API_KEY.\n"
+            "  - Ollama trên máy: khối D, chạy `ollama serve` và `ollama pull <model>` trước.\n"
+            "  - Không có key: chạy trong Claude Code với khối C (subagent).")
 
 
 def make_llm(cfg: Config) -> LLM:

@@ -67,7 +67,7 @@ def fake_backend(model, messages, **params):
     raise AssertionError("prompt lạ: " + p[:80])
 
 
-def test_lite_end_to_end(tmp_path, monkeypatch):
+def test_lite_end_to_end(tmp_path, monkeypatch, capsys):
     shutil.copy(ROOT / "config.yaml", tmp_path / "config.yaml")
     (tmp_path / "config.local.yaml").write_text(
         "capsule:\n  owner_name: An\n  slug: an\n  thin_sessions: 1\n  quickcheck_n: 1\n", encoding="utf-8")
@@ -81,6 +81,15 @@ def test_lite_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(pc.llm, "_http_backend", fake_backend)
 
     assert main(["ingest"]) == 0
+    assert "Tiếp: capsule domains" in capsys.readouterr().out
+    # quên đặt key: dừng có hướng dẫn, không lưu danh sách lĩnh vực rỗng
+    def no_key(*a, **k):
+        raise TypeError("Could not resolve authentication method")
+    monkeypatch.setattr(pc.llm, "_http_backend", no_key)
+    assert main(["domains"]) == 1
+    assert "ANTHROPIC_API_KEY" in capsys.readouterr().err
+    assert not (tmp_path / "data" / "lite" / "domains.json").exists()
+    monkeypatch.setattr(pc.llm, "_http_backend", fake_backend)
     assert main(["domains"]) == 0
     assert main(["build", "--domains", "kiem-thu"]) == 0
     assert main(["package"]) == 0

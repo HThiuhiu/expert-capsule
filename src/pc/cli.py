@@ -11,22 +11,31 @@ from .config import load_config
 NOT_YET = "Chưa triển khai: theo D5, bước này chỉ làm sau khi bạn duyệt `reports/step0_data.md`."
 
 
-def cmd_ingest(args) -> int:
+def run_ingest(cfg, path: str | None):
+    """Đọc export, ghi sessions.jsonl và báo cáo Step 0. Trả (kết quả, file phiên, file báo cáo), None nếu thiếu file."""
     from .ingest import ingest, write_sessions
     from .reports.step0 import render
 
-    cfg = load_config()
     ing = cfg.ingest
-    src = Path(args.path) if args.path else cfg.path("raw")
+    src = Path(path) if path else cfg.path("raw")
     if not src.exists():
-        print(f"Không thấy {src}. Đặt export ChatGPT/Claude vào data/raw/ (D6.1).", file=sys.stderr)
-        return 2
+        print(f"Không thấy {src}. Đặt file export (zip ChatGPT/Claude, hoặc .txt) vào data/raw/, "
+              "xem data/README.md.", file=sys.stderr)
+        return None
     res = ingest(src, ing.get("min_user_turns", 2), ing.get("include_attachments", True))
     out = cfg.path("interim") / "sessions.jsonl"
     write_sessions(res.sessions, out)
     rep = cfg.path("reports") / "step0_data.md"
     rep.parent.mkdir(parents=True, exist_ok=True)
     rep.write_text(render(res, ing.get("gate_min_sessions", 300), ing.get("min_user_turns", 2)), encoding="utf-8")
+    return res, out, rep
+
+
+def cmd_ingest(args) -> int:
+    r = run_ingest(load_config(), args.path)
+    if r is None:
+        return 2
+    res, out, rep = r
     print(f"{len(res.sessions)} phiên -> {out}")
     print(f"Báo cáo -> {rep}")
     print("Dừng ở cổng Step 0. Chờ bạn xem báo cáo.")

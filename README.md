@@ -58,7 +58,12 @@ cp config.local.example.yaml config.local.yaml   # điền tên bạn, chọn c�
    - ChatGPT: Settings > Data controls > Export data. Tải file zip trong email.
    - Claude: Settings > Privacy > Export data. Tải file zip trong email.
    - Gemini hoặc nguồn khác: chép ra file `.txt`, mỗi lượt mở đầu bằng `User:` hoặc `Gemini:`.
-2. **Đặt API key**: `export ANTHROPIC_API_KEY=...` (hoặc `ant auth login`). Không có key: xem mục kế tiếp.
+2. **Chọn cách chạy model** (bật khối tương ứng trong `config.local.yaml`):
+   - Anthropic API key (mặc định): `export ANTHROPIC_API_KEY=...`; PowerShell: `$env:ANTHROPIC_API_KEY="..."`.
+   - OpenAI API key (khối E): đặt `OPENAI_API_KEY`. Gói ChatGPT Plus/Pro không kèm API key; key tạo ở
+     platform.openai.com và tính tiền riêng.
+   - Không có key nhưng có Claude Code (khối C): xem mục kế tiếp.
+   - Chạy trên máy bằng Ollama (khối D): xem mục "Muốn lịch sử chat không rời máy".
 3. **Chạy**:
 
 ```bash

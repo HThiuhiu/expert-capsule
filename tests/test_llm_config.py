@@ -64,9 +64,16 @@ def test_openai_compat_and_ollama(monkeypatch):
     assert "effort" not in payload and payload["temperature"] == 0
     monkeypatch.setenv("OPENAI_API_KEY", "k")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://openrouter.example/api/v1")
-    llm._http_backend("openai/some-model", [{"role": "user", "content": "x"}])
+    llm._http_backend("openai/some-model", [{"role": "user", "content": "x"}], max_tokens=4096)
     assert seen[-1][0] == "https://openrouter.example/api/v1/chat/completions"
     assert seen[-1][1] == {"authorization": "Bearer k"}
+    assert seen[-1][2]["max_tokens"] == 4096 and "max_completion_tokens" not in seen[-1][2]  # bên thứ ba: giữ nguyên
+    monkeypatch.delenv("OPENAI_BASE_URL")
+    llm._http_backend("openai/gpt-5-mini", [{"role": "user", "content": "x"}], max_tokens=4096, effort="low")
+    url, _, payload = seen[-1]
+    assert url == "https://api.openai.com/v1/chat/completions"
+    assert "max_tokens" not in payload and payload["max_completion_tokens"] >= 16000  # GPT-5 trả 400 với max_tokens
+    assert payload["reasoning_effort"] == "low" and "effort" not in payload
 
 
 def test_config_local_overrides(tmp_path):

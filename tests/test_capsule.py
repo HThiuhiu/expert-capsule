@@ -4,7 +4,9 @@ from collections import Counter
 from pathlib import Path
 
 from capsule import agentq, review
-from capsule.common import Batch, ask_many
+import pytest
+
+from capsule.common import Batch, LLMUnavailable, ask_many
 from capsule.mine import validate
 from capsule.package import package
 from capsule.package.exports import custom_instructions
@@ -137,6 +139,18 @@ def test_queue_bundle_import_roundtrip(tmp_path):
     assert ok == 3 and bad == 1 and not list(agentq.qdir(cfg).glob("*.json"))
     again = ask_many(llm, {"model": "agent/x"}, ["P1", "P2"], tag="t1")
     assert again.pending == 0 and again.answers == [{"ok": 1}, {"ok": 1}]
+
+
+def test_ask_many_all_errors_raise_partial_ok(tmp_path):
+    def flaky(model, messages, **kw):
+        if "BAD" in messages[-1]["content"]:
+            raise TypeError("Could not resolve authentication method")
+        return {"text": '{"ok": 1}', "input_tokens": 1, "output_tokens": 1}
+    llm = LLM(tmp_path / "c", backend=flaky)
+    with pytest.raises(LLMUnavailable, match="ANTHROPIC_API_KEY"):
+        ask_many(llm, {"model": "anthropic/x"}, ["BAD1", "BAD2"], tag="t", workers=1)
+    res = ask_many(llm, {"model": "anthropic/x"}, ["BAD1", "OK"], tag="t", workers=1)  # một phần lỗi: chạy tiếp
+    assert res.answers == [None, {"ok": 1}] and len(res.errors) == 1
 
 
 # ---------- Bước 7, 8 ----------

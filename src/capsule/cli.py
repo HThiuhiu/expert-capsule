@@ -14,7 +14,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from .common import NeedAgents, load_config, make_llm
+from .common import LLMUnavailable, NeedAgents, load_config, make_llm
 
 
 def _cfg(args):
@@ -41,8 +41,22 @@ def _need(e: NeedAgents) -> int:
 
 
 def cmd_ingest(args) -> int:
-    from pc.cli import cmd_ingest as pc_ingest
-    return pc_ingest(args)
+    from pc.cli import run_ingest
+    cfg = _cfg(args)
+    r = run_ingest(cfg, args.path)
+    if r is None:
+        return 2
+    res, out, rep = r
+    print(f"{len(res.sessions)} phiên -> {out}")
+    print(f"Báo cáo dữ liệu -> {rep}")
+    if not res.sessions:
+        print("Không đọc được phiên nào. Xem báo cáo, và data/README.md để biết cần đặt file nào.", file=sys.stderr)
+        return 2
+    gate = cfg.ingest.get("gate_min_sessions", 50)
+    if len(res.sessions) < gate:
+        print(f"Lưu ý: dưới {gate} phiên, sẽ có ít luật đủ bằng chứng. Vẫn chạy tiếp được.")
+    print("Tiếp: capsule domains")
+    return 0
 
 
 def cmd_domains(args) -> int:
@@ -209,7 +223,11 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(fn=cmd_queue)
 
     args = p.parse_args(argv)
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except LLMUnavailable as e:
+        print(f"\n{e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

@@ -25,4 +25,11 @@ capsule:
 # models:
 #   cheap:  {model: "ollama/qwen3:14b"}
 
+# (E) Chỉ dùng ChatGPT, có OpenAI API key (tạo ở platform.openai.com, tính tiền riêng với gói ChatGPT Plus/Pro).
+#     Đặt OPENAI_API_KEY. Đổi tên model theo những model tài khoản bạn có.
+# models:
+#   cheap:  {model: "openai/gpt-5-mini", effort: low}
+#   strong: {model: "openai/gpt-5", effort: medium}
+#   judge:  {model: "openai/gpt-5", effort: medium}
+
 # Lĩnh vực tuỳ chỉnh: xem ví dụ trong config.yaml (capsule.custom_domains).
